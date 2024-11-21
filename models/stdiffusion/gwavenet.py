@@ -49,11 +49,13 @@ class gcn(nn.Module):
 class GWaveNetEncoder(nn.Module):
     def __init__(self,
                  model_config,
-                 kernel_size=2):
+                 kernel_size=2,
+                 blocks=2,
+                 layers=3):
         super(GWaveNetEncoder, self).__init__()
         self.dropout = model_config['dropout']
-        self.blocks = model_config['blocks']
-        self.layers = model_config['layers']
+        self.blocks = blocks
+        self.layers = layers
         self.mask_ratio = model_config['mask_ratio']
 
         in_dim = model_config['input_dim']
@@ -80,10 +82,10 @@ class GWaveNetEncoder(nn.Module):
         output_temporal_length -= 1
         receptive_field = 1 + output_temporal_length
 
-        for b in range(self.blocks):
+        for b in range(blocks):
             additional_scope = kernel_size - 1
             new_dilation = 1
-            for i in range(self.layers):
+            for i in range(layers):
                 # dilated convolutions
                 self.filter_convs.append(nn.Conv2d(in_channels=residual_channels,
                                                    out_channels=dilation_channels,

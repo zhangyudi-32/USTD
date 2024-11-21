@@ -3,5 +3,3 @@ config1:
   end_dim: 64
   mask_ratio: 0.75
   dropout: 0.2
-  blocks: 2
-  layers: 3
