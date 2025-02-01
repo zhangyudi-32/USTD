@@ -222,19 +222,25 @@ class STDiffusionForeModel(BaseModel):
         pred = self.results['pred']  # [B, N, L, D]
         gt = self.results['gt']  # [B, N, L, D]
         missing_mask = self.results['missing_mask']  # [B, N, L, D]
-        mae_list, rmse_list, mape_list = [], [], []
+        mae_list, rmse_list, mape_list, picp_list, qice_list  = [], [], [],[], []
         for i in range(12):
             mae_list.append(_mae_with_missing(pred[:,:,i], gt[:,:,i], missing_mask[:,:,i]))
             rmse_list.append(_rmse_with_missing(pred[:,:,i], gt[:,:,i], missing_mask[:,:,i]))
             mape_list.append(_mape_with_missing(pred[:,:,i], gt[:,:,i], missing_mask[:,:,i]))
+            picp_list.append(_mape_with_missing(pred[:,:,i], gt[:,:,i], missing_mask[:,:,i]))
+            qice_list.append(_mape_with_missing(pred[:,:,i], gt[:,:,i], missing_mask[:,:,i]))
         self.metric_MAE, self.metric_RMSE, self.metric_MAPE = np.mean(mae_list), np.mean(rmse_list), np.mean(mape_list)
 
         if self.opt.phase == 'test':
             sampled_pred = self.results['sampled_pred']  # [B, num_sample, N, L, D]
             crps_list = []
+            crps_sum_list=[]
             for i in range(12):
                 crps_list.append(_quantile_CRPS_with_missing(sampled_pred[:,:,:,i], gt[:,:,i], missing_mask[:,:,i]))
+                crps_sum_list.append(_quantile_CRPS_sum(sampled_pred[:,:,:,i], gt[:,:,i], missing_mask[:,:,i]))
             self.metric_CRPS = np.mean(crps_list)
+            self.metric_CPRS_sum = crps_sum_list
+            
 
     def optimize_parameters(self):
         self.set_requires_grad(self.netEncoder, True)
@@ -242,6 +248,7 @@ class STDiffusionForeModel(BaseModel):
         self.forward()
         self.optimizer.zero_grad()
         self.backward()
+        #torch.nn.clip_grad_norm_(self.netSTD.parameters(), 5)
         torch.nn.utils.clip_grad_norm_(self.netSTD.parameters(), 5)
         self.optimizer.step()
 

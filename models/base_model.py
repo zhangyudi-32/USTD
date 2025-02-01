@@ -190,6 +190,7 @@ class BaseModel(ABC):
             self.results[key] = data
         else:
             self.results[key] = np.concatenate((self.results[key], data), axis=0)
+            print(f"DEBUG: 添加 {key} 到 self.results")
 
     def save_networks(self, epoch):
         """Save all the networks to the disk.

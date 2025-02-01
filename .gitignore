@@ -1,0 +1,6 @@
+__MACOSX
+checkpoints
+data
+dataset
+*.pyc
+wandb

@@ -175,9 +175,9 @@ class BaseDataset(data.Dataset, ABC):
         if len(self.A.shape) != 2:
             raise ValueError('A must be a 2D array')
         # norm info check
-        if self.opt.mean is None or self.opt.scale is None:
-            raise ValueError('mean and scale must be specified')
-        print('Data format check passed!!!')
+        #if self.opt.mean is None or self.opt.scale is None:
+        #    raise ValueError('mean and scale must be specified')
+        #print('Data format check passed!!!')
 
     def haversine(self, lon1, lat1, lon2, lat2):
         """
@@ -371,11 +371,18 @@ class BaseDataset(data.Dataset, ABC):
     #     return batch_data
 
     def get_node_division(self, test_nodes_path, num_nodes=None, test_node_ratio=1/3):
+        if test_nodes_path is None:  # 直接判断 None，避免 os.path.isfile(None) 报错
+            print('test_nodes_path is None. Randomly divide nodes for testing!')
+            rand = np.random.RandomState(4)  # Fixed random output
+            test_nodes = np.sort(rand.choice(list(range(0, num_nodes)), int(num_nodes * test_node_ratio + 0.5), replace=False))
+            return test_nodes  # 这里不用保存文件，因为路径是 None
+    
         if os.path.isfile(test_nodes_path):
             test_nodes = np.load(test_nodes_path)
         else:
-            print('No testing nodes. Randomly divide nodes for testing!')
+            print('No testing nodes file found. Randomly divide nodes for testing!')
             rand = np.random.RandomState(4)  # Fixed random output
             test_nodes = np.sort(rand.choice(list(range(0, num_nodes)), int(num_nodes * test_node_ratio + 0.5), replace=False))
             np.save(test_nodes_path, test_nodes)
+        
         return test_nodes

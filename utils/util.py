@@ -145,3 +145,25 @@ def _quantile_CRPS_with_missing(y, label, missing_mask):
         q_loss = quantile_loss(label, q_pred, quantiles[i], valid_mask)
         CRPS += q_loss / denom
     return CRPS / len(quantiles)
+def _quantile_CRPS_sum(y, label, missing_mask):
+    label_sum = label.sum(axis=-1)
+    y_sum = y.sum(axis=-1)
+    return _quantile_CRPS_with_missing(y_sum, label_sum, missing_mask.mean(axis=-1))
+
+def _picp(y, all_gen_y, CI=95):
+    low, high = (100 - CI) / 2, 100 - (100 - CI) / 2
+    CI_y_pred = np.percentile(all_gen_y.cpu().numpy(), q=[low, high], axis=1)
+    coverage = ((y.cpu().numpy() >= CI_y_pred[0]) & (y.cpu().numpy() <= CI_y_pred[1])).mean()
+    return coverage
+
+def _qice(y, all_gen_y, n_bins=5):
+    quantile_list = np.linspace(0, 100, n_bins + 1)
+    all_gen_y = all_gen_y.cpu().numpy().transpose(0, 2, 3, 1)
+    y_pred_quantiles = np.percentile(all_gen_y, q=quantile_list, axis=-1).transpose(1, 2, 3, 0)
+    quantile_membership = ((y.cpu().numpy()[..., None] - y_pred_quantiles) > 0).astype(int).sum(axis=-1)
+    bin_counts = np.array([(quantile_membership == v).sum() for v in range(n_bins + 2)])
+    bin_counts[1] += bin_counts[0]
+    bin_counts[-2] += bin_counts[-1]
+    bin_counts = bin_counts[1:-1]
+    y_ratio = bin_counts / (y.shape[0] * y.shape[1] * y.shape[2])
+    return np.abs(np.ones(n_bins) / n_bins - y_ratio).mean()

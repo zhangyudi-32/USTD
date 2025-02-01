@@ -8,6 +8,7 @@ from models import create_model
 from utils.logger import Logger
 import subprocess
 from tqdm import tqdm
+#import wandb
 
 
 if __name__ == '__main__':
@@ -16,6 +17,10 @@ if __name__ == '__main__':
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     dataset_size = len(dataset)    # get the number of samples in the dataset.
     print('The number of training samples = %d' % dataset_size)
+    
+    #project_name = f"{opt.dataset_name}_train" if hasattr(opt, 'dataset_name') else f"{opt.dataset_mode}_train"
+    #wandb.init(project=project_name, config=opt)
+    
     if opt.enable_val:
         val_opt, _ = Valptions().parse()  # get validation options
         val_dataset = create_dataset(val_opt)  # create a validation dataset given opt.dataset_mode and other options
@@ -39,28 +44,33 @@ if __name__ == '__main__':
 
             model.set_input(data)         # unpack data from dataset and apply preprocessing
             iter_start_time = time.time()  # timer for computation per iteration
-            if total_iters % opt.print_freq == 0:
+            if True or total_iters % opt.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
 
             total_iters += 1
             epoch_iter += 1
             model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
 
-            if total_iters % opt.print_freq == 0:   # display images on visdom and save images to
+    
+            if True or total_iters % opt.print_freq == 0:   # display images on visdom and save images to
                 losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time)
                 visualizer.print_current_losses(epoch, total_iters, losses, t_comp, t_data)
 
             iter_data_time = time.time()
         epoch_end_time = time.time()
+        # new_lr = model.update_learning_rate()  # update learning rate
+       #wandb.log({'epoch': epoch, 'losses': model.get_current_losses(), 'lr': new_lr})
 
-        if epoch > 0 and opt.enable_val and epoch % val_opt.eval_epoch_freq == 0:
+        if True or epoch > 0 and opt.enable_val and epoch % val_opt.eval_epoch_freq == 0:
+
             model.eval()
             val_start_time = time.time()
             for i, data in tqdm(enumerate(val_dataset), total=dataset_size):  # inner loop within one epoch
                 model.set_input(data)  # unpack data from dataset and apply preprocessing
                 model.test()
-                model.cache_results()  # store current batch results
+                model.cache_results()# store current batch results
+                print("cache result!")
             t_val = time.time() - val_start_time
             model.compute_metrics()
             metrics = model.get_current_metrics()
@@ -77,7 +87,7 @@ if __name__ == '__main__':
             model.clear_cache()
 
             # check early stopping
-            early_stopping_threshold = 10
+            early_stopping_threshold = 5
             if early_stop_trigger >= early_stopping_threshold:
                 print('Trigger early stopping!')
                 break
@@ -85,8 +95,9 @@ if __name__ == '__main__':
             # check kl term (only for variational methods)
             if opt.model in ['hierarchical', 'snp', 'gsnp'] and epoch > 5 and not model.kl_flag:
                 raise RuntimeError('Bad initialization, terminate the program')
-
-        if epoch % opt.save_epoch_freq == 0:  # cache our model every <save_epoch_freq> epochs
+   
+        if True or epoch % opt.save_epoch_freq == 0:  # cache our model every <save_epoch_freq> epochs
+    
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
             model.save_networks('latest')
             model.save_networks(epoch)
@@ -101,7 +112,10 @@ if __name__ == '__main__':
         print('End of epoch %d / %d \t Time Taken: %d sec' % (
         epoch, opt.n_epochs + opt.n_epochs_decay, epoch_end_time - epoch_start_time))
         new_lr = model.update_learning_rate()  # update learning rates in the beginning of every epoc
-
+       
+        #if epoch % opt.print_freq == 0:
+            #wandb.log({'epoch': epoch, 'losses': model.get_current_losses()})
+        
     print('Run the evaluation.')
     with open(os.path.join(model.save_dir,'run_test.sh'), 'w') as f:
         f.write('source activate pytorch-py39\n')
@@ -118,3 +132,4 @@ if __name__ == '__main__':
 
     os.system('chmod u+x '+ os.path.join(model.save_dir,'run_test.sh'))
     subprocess.Popen(os.path.join(model.save_dir,'run_test.sh'), shell=True)
+    #wandb.finish()

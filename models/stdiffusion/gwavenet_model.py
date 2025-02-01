@@ -93,11 +93,16 @@ class GWaveNetModel(BaseModel):
 
     def cache_results(self):
         loss = self.mae(self.prediction, self.pred_gt)
+        print(f"DEBUG: MAE loss = {loss}")
         self._add_to_cache('pred', self.prediction, reverse_norm=True)
         self._add_to_cache('gt', self.pred_gt, reverse_norm=True)
         self._add_to_cache('MAE', loss.unsqueeze(0))
+        print("DEBUG: self.results['MAE'] updated")
 
     def compute_metrics(self):
+        print("DEBUG: self.results keys =", self.results.keys())  # 打印当前 self.results 的 keys
+        if 'MAE' not in self.results:
+            raise ValueError("MAE is missing from self.results!")
         self.metric_MAE = self.results['MAE'].mean()
 
     def optimize_parameters(self):
