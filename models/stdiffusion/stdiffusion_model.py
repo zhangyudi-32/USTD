@@ -2,7 +2,7 @@ from models import init_net, BaseModel
 import torch
 import torch.nn.functional as F
 from .stformer import STFormer
-from utils.util import _mae_with_missing,_rmse_with_missing, _mape_with_missing, _quantile_CRPS_with_missing
+from utils.util import _mae_with_missing,_rmse_with_missing, _mape_with_missing, _quantile_CRPS_with_missing, _quantile_CRPS_sum
 from .model_util import get_schedule, laplacian_positional_encoding, temporal_positional_embedding, norm_adj
 from .gwavenet import GWaveNetEncoder
 import os
@@ -136,10 +136,11 @@ class STDiffusionModel(BaseModel):
             self.pred = self.ddim_extrapolation(context_encoding, deterministic=True)
             if self.opt.phase == 'test':
                 self.sampled_pred = []
-                for _ in range(self.num_sample):
-                    sampled_pred = self.ddim_extrapolation(context_encoding, deterministic=False)
-                    self.sampled_pred.append(sampled_pred)
-                self.sampled_pred = torch.stack(self.sampled_pred, dim=1)  # [B, num_sample, N, L, D]
+                with torch.no_grad():
+                    for _ in range(self.num_sample):
+                        sampled_pred = self.ddim_extrapolation(context_encoding, deterministic=False)
+                        self.sampled_pred.append(sampled_pred)
+                    self.sampled_pred = torch.stack(self.sampled_pred, dim=1)  # [B, num_sample, N, L, D]
         else:
             # training
             # diffusion step sampling

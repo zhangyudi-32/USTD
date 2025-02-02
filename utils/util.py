@@ -145,10 +145,12 @@ def _quantile_CRPS_with_missing(y, label, missing_mask):
         q_loss = quantile_loss(label, q_pred, quantiles[i], valid_mask)
         CRPS += q_loss / denom
     return CRPS / len(quantiles)
+    
 def _quantile_CRPS_sum(y, label, missing_mask):
-    label_sum = label.sum(axis=-1)
-    y_sum = y.sum(axis=-1)
-    return _quantile_CRPS_with_missing(y_sum, label_sum, missing_mask.mean(axis=-1))
+    label_sum = label.sum(axis=-1)[:,None]
+    y_sum = y.sum(axis=-1)[:,None]
+    missing_mask = missing_mask.mean(axis=-1)[:,None]
+    return _quantile_CRPS_with_missing(y_sum, label_sum, missing_mask)
 
 def _picp(y, all_gen_y, CI=95):
     low, high = (100 - CI) / 2, 100 - (100 - CI) / 2
